@@ -1,68 +1,75 @@
 import streamlit as st
 from docx import Document
 from io import BytesIO
+import pandas as pd
 
-st.set_page_config(page_title="User Stories Generator", layout="centered")
+st.set_page_config(page_title="User Stories Generator", layout="wide")
 
-st.title("📘 User Stories Generator")
+st.title("📘 User Stories Generator met Tabel")
 
-st.write("Maak hier eenvoudig user stories en exporteer ze naar Word.")
+st.write("Voer hier eenvoudig meerdere user stories in via een tabel en exporteer naar Word.")
 
-# Selectie voor type document
-doc_type = st.radio("Kies type document:", ["Voor klant", "Voor interview"])
-
-# Input velden
-story_id = st.text_input("User Story ID", placeholder="Bijv. US-001")
-als_input = st.text_area("Als...", placeholder="Bijv. een klant")
-wil_input = st.text_area("Wil ik...", placeholder="Bijv. mijn bestelling volgen")
-zodat_input = st.text_area("Zodat...", placeholder="Bijv. ik weet wanneer mijn pakket aankomt")
-
-# Button voor toevoegen
+# Begin met lege tabel als er nog niks is
 if "stories" not in st.session_state:
-    st.session_state["stories"] = []
+    st.session_state["stories"] = pd.DataFrame(
+        [{"ID": "US-001", "Als": "", "Wil ik": "", "Zodat": "", "Kleur": "#FFFFFF"}]
+    )
 
-if st.button("➕ Voeg user story toe"):
-    if story_id and als_input and wil_input and zodat_input:
-        st.session_state.stories.append({
-            "id": story_id,
-            "als": als_input,
-            "wil": wil_input,
-            "zodat": zodat_input
-        })
-        st.success(f"✅ User story {story_id} toegevoegd!")
-    else:
-        st.warning("⚠️ Vul alle velden in voordat je toevoegt.")
+# Data editor voor invoer in tabel
+st.session_state["stories"] = st.data_editor(
+    st.session_state["stories"],
+    num_rows="dynamic",
+    use_container_width=True,
+    key="stories_editor",
+    hide_index=True,
+    column_config={
+        "Kleur": st.column_config.ColorColumn("Kleur", help="Kies een kleur voor deze user story"),
+        "Als": st.column_config.TextColumn("Als"),
+        "Wil ik": st.column_config.TextColumn("Wil ik"),
+        "Zodat": st.column_config.TextColumn("Zodat"),
+    },
+)
 
-# Overzicht tonen
-if st.session_state.stories:
-    st.subheader("📋 Overzicht user stories")
-    for story in st.session_state.stories:
-        st.markdown(f"**{story['id']}**")
-        st.write(f"- **Als** {story['als']}")
-        st.write(f"- **Wil ik** {story['wil']}")
-        st.write(f"- **Zodat** {story['zodat']}")
-        st.markdown("---")
+# Knop om ID's automatisch te genereren
+if st.button("🔢 Genereer ID’s automatisch"):
+    st.session_state["stories"]["ID"] = [
+        f"US-{i:03d}" for i in range(1, len(st.session_state["stories"]) + 1)
+    ]
 
-    # Export naar Word
-    if st.button("💾 Exporteer naar Word"):
-        doc = Document()
-        doc.add_heading(f"User Stories - {doc_type}", level=1)
-        
-        for story in st.session_state.stories:
-            doc.add_heading(story["id"], level=2)
-            doc.add_paragraph(f"Als {story['als']}")
-            doc.add_paragraph(f"Wil ik {story['wil']}")
-            doc.add_paragraph(f"Zodat {story['zodat']}")
-            doc.add_paragraph("---")
+# Voorbeeldweergave
+st.subheader("📋 Voorbeeldweergave")
+for _, story in st.session_state["stories"].iterrows():
+    st.markdown(
+        f"""
+        <div style="background-color:{story['Kleur']}; padding:12px; border-radius:10px; margin-bottom:12px;">
+        <b>{story['ID']}</b><br>
+        - Als {story['Als']}<br>
+        - Wil ik {story['Wil ik']}<br>
+        - Zodat {story['Zodat']}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        # Opslaan in memory
-        buffer = BytesIO()
-        doc.save(buffer)
-        buffer.seek(0)
+# Export naar Word
+if st.button("💾 Exporteer naar Word"):
+    doc = Document()
+    doc.add_heading("User Stories", level=1)
 
-        st.download_button(
-            label="⬇️ Download Word-document",
-            data=buffer,
-            file_name=f"user_stories_{doc_type.replace(' ', '_')}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+    for _, story in st.session_state["stories"].iterrows():
+        doc.add_heading(story["ID"], level=2)
+        doc.add_paragraph(f"Als {story['Als']}")
+        doc.add_paragraph(f"Wil ik {story['Wil ik']}")
+        doc.add_paragraph(f"Zodat {story['Zodat']}")
+        doc.add_paragraph("---")
+
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    st.download_button(
+        label="⬇️ Download Word-document",
+        data=buffer,
+        file_name="user_stories.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
