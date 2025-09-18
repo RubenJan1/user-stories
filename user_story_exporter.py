@@ -15,7 +15,6 @@ if "stories" not in st.session_state:
         [{"ID": "US-001", "Als": "", "Wil ik": "", "Zodat": "", "Kleur": "#FFFFFF"}]
     )
 
-# Data editor voor invoer in tabel
 st.session_state["stories"] = st.data_editor(
     st.session_state["stories"],
     num_rows="dynamic",
@@ -23,12 +22,16 @@ st.session_state["stories"] = st.data_editor(
     key="stories_editor",
     hide_index=True,
     column_config={
-        "Kleur": st.column_config.ColorColumn("Kleur", help="Kies een kleur voor deze user story"),
+        "Kleur": st.column_config.TextColumn(
+            "Kleur",
+            help="Voer een hex-kleurcode in zoals #FFFFFF of laat leeg voor wit"
+        ),
         "Als": st.column_config.TextColumn("Als"),
         "Wil ik": st.column_config.TextColumn("Wil ik"),
         "Zodat": st.column_config.TextColumn("Zodat"),
     },
 )
+
 
 # Knop om ID's automatisch te genereren
 if st.button("🔢 Genereer ID’s automatisch"):
